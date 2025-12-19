@@ -1,4 +1,4 @@
-cname: Build Gallery
+name: Build Gallery
 
 on:
   push:
