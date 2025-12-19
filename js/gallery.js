@@ -6,6 +6,11 @@
 (function() {
   'use strict';
 
+  // Stagger animation tracking
+  let loadedCount = 0;
+  const STAGGER_INCREMENT = 50; // 50ms between each image
+  const MAX_STAGGER = 2000;     // Cap at 2 seconds
+
   // Calculate and set optimal column width based on viewport
   function updateColumnWidth() {
     const gallery = document.getElementById('gallery');
@@ -45,8 +50,59 @@
     return arr;
   }
 
+  // Determine which images are in initial viewport
+  function categorizeImagesByViewport(gallery) {
+    const viewportHeight = window.innerHeight;
+    const items = Array.from(gallery.querySelectorAll('.gallery-item'));
+
+    const inViewport = [];
+    const belowViewport = [];
+
+    items.forEach(item => {
+      const rect = item.getBoundingClientRect();
+      if (rect.top < viewportHeight) {
+        inViewport.push(item);
+      } else {
+        belowViewport.push(item);
+      }
+    });
+
+    return { inViewport, belowViewport };
+  }
+
+  // Observe images for animation when they enter viewport
+  function observeImageAnimations() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          // Check if image is loaded, then animate
+          if (img.complete) {
+            // Calculate stagger delay based on load order
+            const delay = Math.min(loadedCount * STAGGER_INCREMENT, MAX_STAGGER);
+            img.style.transitionDelay = `${delay}ms`;
+            img.classList.add('loaded');
+            loadedCount++;
+            observer.unobserve(img);
+          } else {
+            // Mark as ready to animate when loaded
+            img.dataset.readyToAnimate = 'true';
+          }
+        }
+      });
+    }, {
+      rootMargin: '50px' // Start animating slightly before entering viewport
+    });
+
+    // Observe all images
+    const images = document.querySelectorAll('.gallery-item img');
+    images.forEach(img => observer.observe(img));
+
+    return observer;
+  }
+
   // Create gallery item element
-  function createGalleryItem(image) {
+  function createGalleryItem(image, priority = 'lazy') {
     const item = document.createElement('div');
     item.className = 'gallery-item';
 
@@ -57,14 +113,21 @@
     const img = document.createElement('img');
     img.src = `images/${image.filename}`;
     img.alt = image.filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-    img.loading = 'lazy';
+    img.loading = priority; // 'eager' or 'lazy'
     img.decoding = 'async';
     img.width = image.width;
     img.height = image.height;
 
     // Handle successful load
     img.addEventListener('load', function() {
-      this.classList.add('loaded');
+      // Only animate if image is marked as ready (in viewport)
+      if (this.dataset.readyToAnimate === 'true') {
+        const delay = Math.min(loadedCount * STAGGER_INCREMENT, MAX_STAGGER);
+        this.style.transitionDelay = `${delay}ms`;
+        this.classList.add('loaded');
+        loadedCount++;
+      }
+      // Otherwise, Intersection Observer will handle it when it enters viewport
     });
 
     // Handle failed load - hide the item
@@ -118,6 +181,19 @@
         columnWidth: '.gallery-sizer',
         gutter: 0,
         percentPosition: false
+      });
+
+      // After initial layout, set up animation observer and prioritize viewport images
+      window.msnry.once('layoutComplete', function() {
+        // Start observing images for scroll animations
+        observeImageAnimations();
+
+        // Prioritize loading for viewport images
+        const { inViewport, belowViewport } = categorizeImagesByViewport(gallery);
+        inViewport.forEach(item => {
+          const img = item.querySelector('img');
+          img.loading = 'eager';
+        });
       });
 
       // Recalculate on window resize
