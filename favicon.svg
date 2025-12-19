@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Round cute cat with big eyes -->
+
+  <!-- Ears behind head -->
+  <polygon points="12,45 22,8 42,38" fill="#e8941e"/>
+  <polygon points="88,45 78,8 58,38" fill="#e8941e"/>
+
+  <!-- Inner ears -->
+  <polygon points="18,42 24,18 38,38" fill="#ffcf8a"/>
+  <polygon points="82,42 76,18 62,38" fill="#ffcf8a"/>
+
+  <!-- Round head -->
+  <circle cx="50" cy="58" r="42" fill="#f5a623"/>
+
+  <!-- Big eyes - white -->
+  <ellipse cx="32" cy="52" rx="12" ry="14" fill="#fff"/>
+  <ellipse cx="68" cy="52" rx="12" ry="14" fill="#fff"/>
+
+  <!-- Pupils -->
+  <ellipse cx="34" cy="54" rx="7" ry="9" fill="#2d2d2d"/>
+  <ellipse cx="70" cy="54" rx="7" ry="9" fill="#2d2d2d"/>
+
+  <!-- Eye shine -->
+  <circle cx="31" cy="50" r="3" fill="#fff"/>
+  <circle cx="67" cy="50" r="3" fill="#fff"/>
+
+  <!-- Small nose -->
+  <ellipse cx="50" cy="70" rx="4" ry="3" fill="#ff8a9b"/>
+
+  <!-- Cute W mouth -->
+  <path d="M40,76 Q45,80 50,76 Q55,80 60,76" stroke="#2d2d2d" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

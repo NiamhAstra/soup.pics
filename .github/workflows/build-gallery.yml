@@ -1,0 +1,90 @@
+cname: Build Gallery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'images/**'
+  workflow_dispatch:
+
+jobs:
+  generate-manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Sharp
+        run: npm install sharp
+
+      - name: Generate images.json with dimensions
+        run: |
+          node << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const sharp = require('sharp');
+
+          async function generateManifest() {
+            const imagesDir = './images';
+            const outputPath = './data/images.json';
+
+            // Ensure data directory exists
+            if (!fs.existsSync('./data')) {
+              fs.mkdirSync('./data', { recursive: true });
+            }
+
+            // Check if images directory exists
+            if (!fs.existsSync(imagesDir)) {
+              console.log('No images directory found, creating empty manifest');
+              fs.writeFileSync(outputPath, JSON.stringify([], null, 2));
+              return;
+            }
+
+            const files = fs.readdirSync(imagesDir);
+            const imageExtensions = /\.(jpe?g|png|gif|webp|avif)$/i;
+            const images = [];
+
+            for (const file of files) {
+              if (!imageExtensions.test(file)) continue;
+
+              const filePath = path.join(imagesDir, file);
+
+              try {
+                const metadata = await sharp(filePath).metadata();
+                images.push({
+                  filename: file,
+                  width: metadata.width,
+                  height: metadata.height
+                });
+                console.log(`✓ ${file} (${metadata.width}x${metadata.height})`);
+              } catch (err) {
+                console.error(`✗ ${file}: ${err.message}`);
+              }
+            }
+
+            // Sort alphabetically for consistent diffs
+            images.sort((a, b) => a.filename.localeCompare(b.filename));
+
+            fs.writeFileSync(outputPath, JSON.stringify(images, null, 2));
+            console.log(`\nGenerated manifest with ${images.length} images`);
+          }
+
+          generateManifest().catch(err => {
+            console.error('Failed to generate manifest:', err);
+            process.exit(1);
+          });
+          EOF
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update image manifest [skip ci]'
+          file_pattern: 'data/images.json'
