@@ -25,6 +25,9 @@ jobs:
       - name: Install Sharp
         run: npm install sharp
 
+      - name: Optimize images
+        run: node scripts/optimize-images.js
+
       - name: Generate images.json with dimensions
         run: |
           node << 'EOF'
@@ -86,5 +89,5 @@ jobs:
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'chore: update image manifest [skip ci]'
-          file_pattern: 'data/images.json'
+          commit_message: 'chore: optimize images and update manifest [skip ci]'
+          file_pattern: 'images/** data/images.json data/optimization-cache.json'
