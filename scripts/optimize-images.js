@@ -7,10 +7,11 @@ const { execSync } = require('child_process');
 const sharp = require('sharp');
 
 // Configuration
-const CONFIG_VERSION = '1.0'; // Increment this to force re-optimization of all images
+const CONFIG_VERSION = '1.1'; // Increment this to force re-optimization of all images
 const IMAGES_DIR = './images';
 const CACHE_FILE = './data/optimization-cache.json';
 const MIN_SAVINGS_THRESHOLD = 0.025; // 2.5% minimum savings to overwrite
+const MAX_IMAGE_DIMENSION = 2400; // Maximum width or height in pixels
 
 // Load or initialize cache
 function loadCache() {
@@ -74,8 +75,25 @@ async function optimizeImage(filePath, filename) {
   
   try {
     // Load image with sharp
-    const image = sharp(filePath);
+    let image = sharp(filePath);
     const metadata = await image.metadata();
+    
+    // Resize if image is too large (maintaining aspect ratio)
+    const maxDimension = Math.max(metadata.width, metadata.height);
+    let wasResized = false;
+    if (maxDimension > MAX_IMAGE_DIMENSION) {
+      const resizeOptions = {};
+      if (metadata.width > metadata.height) {
+        resizeOptions.width = MAX_IMAGE_DIMENSION;
+      } else {
+        resizeOptions.height = MAX_IMAGE_DIMENSION;
+      }
+      resizeOptions.fit = 'inside'; // Maintain aspect ratio
+      resizeOptions.withoutEnlargement = true; // Never upscale
+      
+      image = image.resize(resizeOptions);
+      wasResized = true;
+    }
     
     // Apply format-specific optimizations
     if (ext === '.jpg' || ext === '.jpeg') {
@@ -132,7 +150,8 @@ async function optimizeImage(filePath, filename) {
         status: 'optimized',
         originalSize,
         optimizedSize,
-        savings: savingsPercent
+        savings: savingsPercent,
+        wasResized
       };
     } else {
       return {
@@ -219,12 +238,14 @@ async function main() {
     const result = await optimizeImage(filePath, filename);
     
     if (result.status === 'optimized') {
-      console.log(`✅ ${filename} - optimized by ${result.savings}% (${formatBytes(result.originalSize)} → ${formatBytes(result.optimizedSize)})`);
+      const resizeInfo = result.wasResized ? ' [resized]' : '';
+      console.log(`✅ ${filename}${resizeInfo} - optimized by ${result.savings}% (${formatBytes(result.originalSize)} → ${formatBytes(result.optimizedSize)})`);
       results.optimized.push({
         filename,
         savings: result.savings,
         originalSize: result.originalSize,
-        optimizedSize: result.optimizedSize
+        optimizedSize: result.optimizedSize,
+        wasResized: result.wasResized
       });
       
       // Update cache with new hash (file was modified by optimization)
@@ -258,7 +279,12 @@ async function main() {
     const totalOriginal = results.optimized.reduce((sum, r) => sum + r.originalSize, 0);
     const totalOptimized = results.optimized.reduce((sum, r) => sum + r.optimizedSize, 0);
     const totalSavings = ((totalOriginal - totalOptimized) / totalOriginal * 100).toFixed(2);
+    const resizedCount = results.optimized.filter(r => r.wasResized).length;
+    
     console.log(`\n💾 Total savings: ${formatBytes(totalOriginal - totalOptimized)} (${totalSavings}%)`);
+    if (resizedCount > 0) {
+      console.log(`📐 Images resized: ${resizedCount} (max dimension: ${MAX_IMAGE_DIMENSION}px)`);
+    }
   }
   
   console.log('\n✨ Done!\n');
