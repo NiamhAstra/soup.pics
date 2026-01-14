@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Fetch at least 2 commits for git diff
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
