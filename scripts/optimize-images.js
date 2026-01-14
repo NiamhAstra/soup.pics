@@ -40,8 +40,9 @@ function saveCache(cache) {
 }
 
 // Calculate file hash
-function getFileHash(filePath) {
-  const content = fs.readFileSync(filePath);
+function getFileHash(input) {
+  // Support both file path (string) and buffer
+  const content = typeof input === 'string' ? fs.readFileSync(input) : input;
   return crypto.createHash('sha256').update(content).digest('hex');
 }
 
@@ -151,7 +152,8 @@ async function optimizeImage(filePath, filename) {
         originalSize,
         optimizedSize,
         savings: savingsPercent,
-        wasResized
+        wasResized,
+        optimizedBuffer: optimized
       };
     } else {
       return {
@@ -248,8 +250,8 @@ async function main() {
         wasResized: result.wasResized
       });
       
-      // Update cache with new hash (file was modified by optimization)
-      cache.hashes[filename] = getFileHash(filePath);
+      // Update cache with new hash (calculate from optimized buffer)
+      cache.hashes[filename] = getFileHash(result.optimizedBuffer);
       
     } else if (result.status === 'skipped') {
       console.log(`⏭️  ${filename} - skipped (${result.reason})`);
