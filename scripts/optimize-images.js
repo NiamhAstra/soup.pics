@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { execSync } = require('child_process');
 const sharp = require('sharp');
 
 // Configuration
@@ -45,8 +46,6 @@ function getFileHash(filePath) {
 
 // Get list of changed image files from git diff
 function getChangedImageFiles() {
-  const { execSync } = require('child_process');
-  
   try {
     // Get files changed in the last commit
     const output = execSync('git diff --name-only HEAD~1 HEAD', { encoding: 'utf8' });
@@ -228,7 +227,7 @@ async function main() {
         optimizedSize: result.optimizedSize
       });
       
-      // Update cache with new hash
+      // Update cache with new hash (file was modified by optimization)
       cache.hashes[filename] = getFileHash(filePath);
       
     } else if (result.status === 'skipped') {

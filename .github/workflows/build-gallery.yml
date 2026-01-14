@@ -24,8 +24,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Sharp
-        run: npm install sharp
+      - name: Install dependencies
+        run: npm install
 
       - name: Optimize images
         run: node scripts/optimize-images.js
